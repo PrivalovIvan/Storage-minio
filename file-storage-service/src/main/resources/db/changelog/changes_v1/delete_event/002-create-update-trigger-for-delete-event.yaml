@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-update-trigger-for-deleteByEventId-event
+      author: privalov_ivan
+      comment: Trigger for auto updating updated_at in delete_event table
+
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE TRIGGER trg_delete_event_updated_at
+              BEFORE UPDATE ON file_storage.delete_event
+              FOR EACH ROW
+              EXECUTE FUNCTION set_updated_at_trigger();

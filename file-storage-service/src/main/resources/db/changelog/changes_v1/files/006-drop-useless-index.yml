@@ -1,0 +1,9 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-drop-useless-index
+      author: privalov_ivan
+      changes:
+        - dropIndex:
+            schemaName: file_storage
+            tableName: files
+            indexName: idx_files_owner_user_id_storage_key

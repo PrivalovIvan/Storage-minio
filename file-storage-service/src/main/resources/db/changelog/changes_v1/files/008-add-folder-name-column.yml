@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 008-add-folder-name-column
+      author: privalov_ivan
+      changes:
+        - addColumn:
+            schemaName: file_storage
+            tableName: files
+            columns:
+              - column:
+                  name: folder_name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false

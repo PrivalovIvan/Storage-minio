@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-index-table-files
+      author: privalov_ivan
+      changes:
+        - createIndex:
+            schemaName: file_storage
+            tableName: files
+            indexName: idx_files_owner_user_id_storage_key
+            columns:
+              - column:
+                  name: id
+              - column:
+                  name: owner_user_id

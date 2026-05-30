@@ -1,0 +1,64 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-files-table
+      author: privalov_ivan
+      comment: Table for storing file metadata
+      changes:
+        - createTable:
+            schemaName: file_storage
+            tableName: files
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKeyName: pk_files_id
+                    primaryKey: true
+                    unique: true
+              - column:
+                  name: owner_user_id
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: original_file_name
+                  type: varchar
+                  constraints:
+                    nullable: false
+              - column:
+                  name: content_type
+                  type: varchar
+                  constraints:
+                    nullable: false
+              - column:
+                  name: extension
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: size_bytes
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: storage_key
+                  type: varchar
+                  constraints:
+                    nullable: false
+                    unique: true
+                    uniqueConstraintName: uk_files_object_key
+              - column:
+                  name: checksum_sha256
+                  type: varchar
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false

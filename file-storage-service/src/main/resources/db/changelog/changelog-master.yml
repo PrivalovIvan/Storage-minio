@@ -1,0 +1,19 @@
+databaseChangeLog:
+  - include:
+      relativeToChangelogFile: true
+      file: common/schemas/001-create-file-storage-schema.yml
+  - include:
+      relativeToChangelogFile: true
+      file: common/functions/001-create-update-timestamp-function.yml
+
+  - includeAll:
+      relativeToChangelogFile: true
+      path: changes_v1/files
+
+  - includeAll:
+      relativeToChangelogFile: true
+      path: changes_v1/delete_event
+
+  - includeAll:
+      relativeToChangelogFile: true
+      path: changes_v1/scheduled_tasks
