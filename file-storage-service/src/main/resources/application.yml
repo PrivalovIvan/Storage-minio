@@ -1,0 +1,100 @@
+spring:
+  application:
+    name: file-storage-service
+
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 50MB
+
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/${POSTGRES_DB:storage}?currentSchema=file_storage
+    username: ${POSTGRES_USER:test}
+    password: ${POSTGRES_PASSWORD:test}
+    hikari:
+      schema: file_storage
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    change-log: db/changelog/changelog-master.yml
+    liquibase-schema: public
+
+storage:
+  minio:
+    endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+    access-key: ${MINIO_ACCESS_KEY:admin}
+    secret-key: ${MINIO_SECRET_KEY:adminadmin}
+    bucket: ${MINIO_BUCKET:files}
+
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /file-storage
+
+file-storage:
+  validation:
+    max-size-bytes: 5242880
+    allowed-extensions:
+      - jpg
+      - jpeg
+      - png
+      - gif
+      - pdf
+      - doc
+      - docx
+      - xls
+      - xlsx
+      - csv
+      - json
+    allowed-content-types:
+      - image/jpeg
+      - image/png
+      - image/gif
+      - application/pdf
+      - text/csv
+      - application/json
+      - application/msword
+      - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+      - application/vnd.ms-excel
+      - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+
+outbox:
+  delete:
+    interval-ms: ${OUTBOX_INTERVAL_MS:600000}
+    batch-size: ${OUTBOX_BATCH_SIZE:1000}
+    threads: ${OUTBOX_THREADS:0}
+    polling-interval-seconds: 10
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: false
+  open-api:
+    servers:
+      - url: /api/v1
+        description: Public base path via API Gateway
+    components:
+      security-schemes:
+        bearerAuth:
+          type: oauth2
+          description: Keycloak OAuth2 Authorization Code + PKCE
+          flows:
+            authorizationCode:
+              authorizationUrl: ${KEYCLOAK_AUTHORIZATION_URL:http://localhost:9000/realms/local/protocol/openid-connect/auth}
+              tokenUrl: ${KEYCLOAK_TOKEN_URL:http://localhost:9000/realms/local/protocol/openid-connect/token}
+              scopes:
+                openid: OpenID
+                profile: User profile
+                email: User email
+                roles: User roles
+    security:
+      - bearerAuth: [ ]

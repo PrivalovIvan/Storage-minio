@@ -1,0 +1,14 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-update-trigger-for-files
+      author: privalov_ivan
+      comment: Trigger for auto updating updated_at in files table
+
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE TRIGGER trg_files_updated_at
+              BEFORE UPDATE ON file_storage.files
+              FOR EACH ROW
+              EXECUTE FUNCTION set_updated_at_trigger();

@@ -1,0 +1,10 @@
+databaseChangeLog:
+  - changeSet:
+      id: 004-rename-name-column-storage-key
+      author: privalov_ivan
+      changes:
+        - renameColumn:
+            schemaName: file_storage
+            tableName: files
+            oldColumnName: storage_key
+            newColumnName: storage_path

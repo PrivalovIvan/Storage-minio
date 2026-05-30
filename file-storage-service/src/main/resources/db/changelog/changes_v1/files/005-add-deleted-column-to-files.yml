@@ -1,0 +1,16 @@
+databaseChangeLog:
+  - changeSet:
+      id: 005-add-deleted-column-to-files
+      author: privalov_ivan
+      comment: Add soft deleteByEventId flag 'deleted' to files table
+      changes:
+        - addColumn:
+            schemaName: file_storage
+            tableName: files
+            columns:
+              - column:
+                  name: is_deleted
+                  type: boolean
+                  defaultValueBoolean: false
+                  constraints:
+                    nullable: false

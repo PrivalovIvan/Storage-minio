@@ -1,0 +1,15 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-add-version-column-to-files
+      author: privalov_ivan
+      changes:
+        - addColumn:
+            schemaName: file_storage
+            tableName: files
+            columns:
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: "0"
+                  constraints:
+                    nullable: false

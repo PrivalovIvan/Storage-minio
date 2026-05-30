@@ -1,0 +1,471 @@
+openapi: 3.0.3
+info:
+  title: Investment Strategy Constructor API
+  version: 0.0.1
+  description: |
+    Public API contract for the **Storage**.
+
+servers:
+  - url: /api/v1
+    description: Public base path via API Gateway
+  - url: /
+    description: Direct service base path (Gateway strips /api/v1)
+
+tags:
+  - name: ProcessPublic
+    description: Public process-based constructor API (served by camunda-adapter-service via API Gateway). Includes active-task restore by processId.
+  - name: DictionariesPublic
+    description: Public dictionaries for constructor UI (served by reference-data-service via API Gateway).
+  - name: TasksPublic
+    description: Public API for working with user tasks.
+  - name: FilesPublic
+    description: Public files API served by file-storage-service via API Gateway.
+  - name: FilesInternal
+    description: Internal files endpoints for service-to-service storage lifecycle operations, served by file-storage-service.
+  - name: DictionariesInternal
+    description: Internal dictionaries endpoints for service-to-service validation.
+  - name: StrategiesInternal
+    description: Internal endpoints for strategy validation context (served by strategy-service).
+
+security:
+  - bearerAuth: [ ]
+
+paths:
+  /files:
+    post:
+      tags:
+        - FilesPublic
+      summary: Upload constructor file
+      operationId: uploadFile
+      description: |
+        Uploads a temporary file for the current authenticated user.
+        The request must be sent as `multipart/form-data` with binary part `file`.
+        `folderName` identifies the target storage folder for the uploaded file.
+
+        The returned metadata is intended for display and for hidden form fields
+        submitted later through the generic `/tasks/{taskId}/submit` JSON contract.
+      requestBody:
+        $ref: '#/components/requestBodies/FileUploadMultipartRequest'
+      responses:
+        '201':
+          description: File uploaded and metadata returned
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileUploadResponse'
+              examples:
+                default:
+                  $ref: '#/components/examples/FileUploadResponseExample'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /files/{fileId}:
+    delete:
+      tags:
+        - FilesPublic
+      summary: Delete uploaded constructor file
+      operationId: deleteFile
+      description: |
+        Deletes a temporary file that belongs to the current authenticated user.
+        Files already moved to permanent storage are not deleted by this endpoint.
+      parameters:
+        - $ref: '#/components/parameters/FileId'
+      responses:
+        '204':
+          description: Temporary file deleted successfully. No response body.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /internal/files/commit:
+    x-internal: true
+    put:
+      tags:
+        - FilesInternal
+      summary: Commit files
+      operationId: commitFiles
+      description: |
+        Internal service-to-service endpoint for committing uploaded files.
+        The implementation moves committed files from temporary storage to permanent storage.
+
+        Callers decide when files should become
+        permanent and pass file identifiers with target `folderName`. Repeated calls with the same
+        file identifiers are treated idempotently by the implementation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommitFilesRequest'
+            examples:
+              default:
+                $ref: '#/components/examples/CommitFilesRequestExample'
+      responses:
+        '204':
+          description: Files committed successfully. No response body.
+          headers:
+            X-Request-Id:
+              $ref: '#/components/headers/X-Request-Id'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer JWT from Keycloak (OIDC)
+
+  requestBodies:
+    FileUploadMultipartRequest:
+      required: true
+      content:
+        multipart/form-data:
+          schema:
+            $ref: '#/components/schemas/FileUploadRequest'
+          encoding:
+            file:
+              contentType: application/octet-stream
+
+  parameters:
+    FileId:
+      name: fileId
+      in: path
+      required: true
+      description: Uploaded file identifier.
+      schema:
+        $ref: '#/components/schemas/FileId'
+      example: 9a94f5ec-18e4-4e1e-8f58-2bcd6c6c2f01
+
+  headers:
+    X-Request-Id:
+      description: Request correlation id (generated by gateway if missing)
+      schema:
+        type: string
+      example: 9b2df7a2-2c36-4c5b-a8a5-6a14d9f8d6d1
+
+  responses:
+    UnauthorizedError:
+      description: Missing or invalid access token
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ForbiddenError:
+      description: Access forbidden (insufficient permissions)
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    BadRequestError:
+      description: Bad request
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ValidationError:
+      description: Field-level validation failed
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+
+    NotFoundError:
+      description: Resource not found
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ConflictError:
+      description: Conflict with current process state
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    BadGatewayError:
+      description: Upstream service error (e.g. Camunda or strategy-service failure)
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    ServerError:
+      description: Internal server error
+      headers:
+        X-Request-Id:
+          $ref: '#/components/headers/X-Request-Id'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ReferenceId:
+      type: string
+      minLength: 1
+      pattern: '^[a-zA-Z0-9-]+$'
+      description: Common slug-like identifier format for reference dictionary entities.
+
+    FileUploadRequest:
+      type: object
+      description: Multipart request for temporary file upload.
+      required: [ file, folderName ]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Binary file content.
+        folderName:
+          $ref: '#/components/schemas/FolderName'
+
+    FileId:
+      type: string
+      format: uuid
+      description: Uploaded file identifier.
+      example: 9a94f5ec-18e4-4e1e-8f58-2bcd6c6c2f01
+
+    FolderName:
+      type: string
+      minLength: 1
+      description: Storage folder name used for file storage routing.
+      example: temp/16763be4-6022-406e-a950-fcd5018633ca
+
+    FileUploadResponse:
+      type: object
+      description: Uploaded file metadata returned to the caller.
+      required: [ fileId, originalFileName, contentType, sizeBytes, createdAt ]
+      properties:
+        fileId:
+          $ref: '#/components/schemas/FileId'
+        originalFileName:
+          type: string
+          description: Original file name for display in UI.
+          example: report.pdf
+        contentType:
+          type: string
+          description: Detected or provided MIME type.
+          example: application/pdf
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 0
+          description: File size in bytes.
+          example: 1048576
+        createdAt:
+          type: string
+          format: date-time
+          description: Upload timestamp in UTC.
+          example: '2026-05-05T14:30:00Z'
+
+    CommitFilesRequest:
+      type: object
+      description: Internal request to commit uploaded files.
+      required: [ fileIds, folderName ]
+      properties:
+        fileIds:
+          type: array
+          description: Uploaded file identifiers to commit.
+          minItems: 1
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/FileId'
+          example:
+            - 9a94f5ec-18e4-4e1e-8f58-2bcd6c6c2f01
+            - 2874b046-3657-4c1e-86b8-44fbf650b963
+        folderName:
+          $ref: '#/components/schemas/FolderName'
+
+    ErrorResponse:
+      type: object
+      description: Standard error response body.
+      required: [ timestamp, status, error, method, path ]
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp (UTC)
+        status:
+          type: integer
+          description: HTTP status code
+          example: 401
+        error:
+          type: string
+          description: HTTP status reason
+          example: Unauthorized
+        method:
+          type: string
+          description: HTTP method
+          example: GET
+        path:
+          type: string
+          description: Request path
+          example: /api/v1/process/start
+
+    FieldError:
+      type: object
+      required: [ field, message ]
+      properties:
+        field:
+          type: string
+          description: Field name in request payload (dot-notation allowed)
+          example: name
+        code:
+          type: string
+          description: Validation code
+          example: REQUIRED
+        message:
+          type: string
+          description: Human-readable validation message (RU)
+          example: Поле обязательно для заполнения
+        rejectedValue:
+          nullable: true
+          description: Rejected value (if safe)
+          example: abc
+
+    Action:
+      type: string
+      description: Audit action type
+      enum: [ CREATED, UPDATED, DELETED, LOGIN ]
+      example: "UPDATED"
+
+    ActorType:
+      type: string
+      description: Actor type
+      enum: [ USER, ADMIN, SYSTEM, SERVICE, ANONYMOUS ]
+      example: "USER"
+
+    AuditEventDto:
+      type: object
+      description: Immutable audit event
+      required: [ eventId, eventType, aggregateType, aggregateId, actorId, actorType, action, occurredAt, sourceService ]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+          description: Unique audit event identifier
+          example: "16763be4-6022-406e-a950-fcd5018633ca"
+        eventType:
+          type: string
+          description: Event type in format "aggregate.action" (e.g. user.created, strategy.updated)
+          example: "task.updated"
+        aggregateType:
+          type: string
+          description: Aggregate type
+          example: "TASK"
+        aggregateId:
+          type: string
+          description: Aggregate identifier
+          example: "16763be4-6022-406e-a950-fcd5018633ca"
+        actorId:
+          type: string
+          description: Actor identifier
+          example: "16763be4-6022-406e-a950-fcd5018633ca"
+        actorType:
+          $ref: '#/components/schemas/ActorType'
+        action:
+          $ref: '#/components/schemas/Action'
+        occurredAt:
+          type: string
+          format: date-time
+          description: Event timestamp in UTC
+          example: "2026-05-07T12:45:00Z"
+        sourceService:
+          type: string
+          description: Source service name
+          example: "camunda-adapter-service"
+        details:
+          type: object
+          description: Additional event details
+          nullable: true
+          additionalProperties: true
+          example:
+            action: "NEXT"
+            payload:
+              processId: "strategy-123"
+              status: "DRAFT"
+
+    ValidationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          required: [ errors ]
+          properties:
+            errors:
+              type: array
+              items:
+                $ref: '#/components/schemas/FieldError'
+
+  examples:
+    FileUploadResponseExample:
+      summary: Uploaded file metadata
+      value:
+        fileId: 9a94f5ec-18e4-4e1e-8f58-2bcd6c6c2f01
+        originalFileName: report.pdf
+        contentType: application/pdf
+        sizeBytes: 1048576
+        createdAt: '2026-05-05T14:30:00Z'
+
+    CommitFilesRequestExample:
+      summary: Files committed
+      value:
+        fileIds:
+          - 9a94f5ec-18e4-4e1e-8f58-2bcd6c6c2f01
+          - 2874b046-3657-4c1e-86b8-44fbf650b963
+        folderName: permanent/16763be4-6022-406e-a950-fcd5018633ca
+

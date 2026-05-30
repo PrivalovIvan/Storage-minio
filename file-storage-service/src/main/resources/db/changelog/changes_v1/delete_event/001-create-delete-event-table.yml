@@ -1,0 +1,94 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-create-deleteByEventId-event-table
+      author: privalov_ivan
+      changes:
+        - createTable:
+            schemaName: file_storage
+            tableName: delete_event
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_delete_event_id
+                    nullable: false
+
+              - column:
+                  name: file_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: owner_user_id
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: storage_path
+                  type: varchar(1024)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: status
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: version
+                  type: bigint
+                  defaultValueNumeric: "0"
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: created_at
+                  type: timestamp
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+              - column:
+                  name: updated_at
+                  type: timestamp
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+
+        - createIndex:
+            schemaName: file_storage
+            tableName: delete_event
+            indexName: idx_delete_event_status
+            columns:
+              - column:
+                  name: status
+
+        - createIndex:
+            schemaName: file_storage
+            tableName: delete_event
+            indexName: idx_delete_event_created_at
+            columns:
+              - column:
+                  name: created_at
+
+        - createIndex:
+            schemaName: file_storage
+            tableName: delete_event
+            indexName: idx_delete_event_status_created_at
+            columns:
+              - column:
+                  name: status
+              - column:
+                  name: created_at
+
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE file_storage.delete_event 
+              ADD CONSTRAINT chk_delete_event_status 
+              CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED'));
